@@ -1,7 +1,14 @@
 [heading]
-size = 50
-margin = 10
+font = "Arial"
+size = 30
+margin = 20
 
 [dash]
-size = 8
-margin = 150
+font = "Arial"
+size = 15
+margin = 5
+
+[default]
+font = "Arial"
+size = 15
+margin = 5

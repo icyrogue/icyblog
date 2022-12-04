@@ -63,6 +63,7 @@ func (ld *loader) Scan() {
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(main))
 	for i := 0; scanner.Scan(); i++ {
+		log.Println(scanner.Text())
 		line := ld.styleToLine(styles, scanner.Bytes())
 		line.Text = scanner.Text() // exclude the first car
 		line.Number = i
@@ -79,16 +80,18 @@ func (ld *loader) updateStyles(data []byte) (map[string]models.Style, error){
 }
 
 func (ld *loader) styleToLine(styles map[string]models.Style, data []byte) models.Line {
-	prefix := prefix(data[0])
-
-	style, fd := styles[prefix.String()]
+	var pref prefix = ' '
+	if len(data) > 0 {
+	pref = prefix(data[0])
+	}
+	style, fd := styles[pref.String()]
 	line := models.Line{}
 	line.Style = &style
 	if !fd {
 		style = styles["default"]
-		log.Println("couldnt find style for prefix falling down to def style", prefix.String(), prefix)
+		log.Println("couldnt find style for prefix falling down to def style", pref.String(), pref)
 	}
 	style.AsString = fmt.Sprintf("%dpx %s", style.Size, style.Font)
-	line.Prefix = string(prefix)
+	line.Prefix = string(pref)
 	return line
 }

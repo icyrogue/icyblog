@@ -16,6 +16,7 @@ type renderer struct {
 
 type lineData struct {
 	mtx   sync.RWMutex
+	lastLine *models.Line
 	lines map[int]models.Line
 }
 
@@ -71,11 +72,27 @@ func (c *canvas) updateSize(doc *js.Value) {
 func (c *canvas) drawLine(line models.Line, data *lineData) {
 	data.mtx.Lock()
 	defer data.mtx.Unlock()
-	line.GetChords()
-	c.ctx.Set("font", "30pt Arial")
+	c.getLineChords(&line, data)
+	c.ctx.Set("font", line.Style.AsString)
 	c.ctx.Call("fillText", line.Text, line.PosX, line.PosY)
 	data.lines[line.Number] = line
-	log.Println("drew", line)
+	log.Println("drew", line, data)
+}
+
+func (c *canvas) getLineChords(line *models.Line, data *lineData) {
+	var margin = 10
+	var lastY float32
+	if prev := data.lastLine; prev != nil {
+		margin = prev.Style.Margin
+		lastY = prev.PosY
+	log.Println("prev is ", prev)
+	}
+	log.Print("chords are", margin, lastY)
+	line.PosX = 15
+	line.PosY = (lastY + float32(line.Style.Size + line.Style.Margin))
+	data.lastLine = line
+	log.Println("last line is", *data.lastLine)
+	//data.lines[int(line.PosY)] = *line
 }
 
 func (c *canvas) draw() {
