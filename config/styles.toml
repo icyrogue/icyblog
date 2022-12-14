@@ -1,0 +1,8 @@
+[meta]
+sources = {local = "./example"}
+types = {neorg = "./neorg_template.html"}
+
+
+
+["^#\\ "]
+name = "heading"
