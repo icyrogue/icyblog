@@ -1,117 +1,169 @@
-title: postman
-description:
-authors: icy
-categories: OP projects
-created: 2022-12-06
-updated: 2022-12-07
-version: 0.0.18
+# A tool for monitoring and maintaining the relevance of an electronic components list
 
 
 
+## Technical requirements 
 
-##### EN | [RU](README_RU.md)
+
+- Create component list to track from existing BOM fail
+
+- JWT token authentication 
+
+- Notify a user when availability of a component in a list changes
+
+- Notifications should contain alternatives to unavailable electronic component
+
+- Add and delete individual items from the list of components to track 
 
 
-# Your friendly neighbour mailing list service
+## Example notification
 
-- Written in pure GO
-- Celery client integration
-- Email templates with gohtml syntax supported
-- Check if email was read
-- All around nice guy letting everybody know about latest gossip in town
+
+[example.md](example.md)
+
+
+## Example service interaction scenario
+
+
+0. User gets an API token tied to an E-Mail address for notifications and authentication
+
+1. User creates a new list
+
+2. User uploads components from BOM file or adds them using JSON
+
+3. Service makes requests to EFind API to check individual components availability
+
+4. If component from a list is no longer available, user gets E-Mail notification containing possible alternatives to given item 
+
+5. User can stop or start tracking of individual component in a list
+
+6. User can create multiple lists of components to track
+
+
+## User story
+
+
+>As **inventory manager** I can easily track electronic components from pre-existing BOM file and 
+
+>get notifications when any from it becomes unavailable
+
+
+
+>As **electronic engineer** I can add needed components for a new project to a tracking list and 
+
+>review alternatives, if any electronic component isn't available
+
 
 ## API methods
 
-#### Create new mailing list    
 
-`POST /api/list` - response is an ID for new mailing list
 
-#### Add user to mailing list  
+### Associate E-Mail with new API token
 
-`POST /api/list/{id}` - where [id](id) is ID list's ID gotten from creation
-  Request's body is a JSON struct with field names corresponding to user's information needed for Email template see [Add user](#add-user)
 
-#### Add multiple users   
+- ` POST api/login ` notifications will be sent to E-Mail in request body
 
-`POST /api/list/{id}/batch` - where [id](id) is ID list's ID gotten from creation
-  Request's body is a JSON array with structs where any individual struct is the same as with single user addition
+- **Response**: JWT token for API authentication
 
-#### Get all the users in mailing list with specific ID   
 
-`GET /api/list/{id}` - response is an array of JSON structs of individual user's information in mailing list with specific ID
+### Working with tracking lists 
 
-#### Get read statistics from mailing list  
 
-`GET api/list/{id}/stat` - get information about who read email from mailing list 
-  Checkout implementation [Read statistics](#read-statistics)
+- ` POST api/list ` create a new list
 
-#### Add email template to mailing list    
+- **Response:** new [list id](list%20id)
 
-`POST /api/list/{id}/template` - request's body is a email template in text/html  
-  [html/template](https://pkg.go.dev/html/template) is used for email template implementation. This means that all syntax features of gohtml format
-  are available, see [Basic template for a mailing list](#basic-template-for-a-mailing-list)
+- ` GET api/list/[list ID](list%20ID)?pageNum=[page number](page%20number)&pageSize=[page size](page%20size) ` get components from a list with given [list id](list%20id)    
 
-## Examples
+- **Example response:** 
 
-#### Add user
+```javascript
 
-> `POST /api/list/{id}`
-```
 {
-"email": "moya@govorit.net",
-"name": "Alice"
-"bonuses": "1200",
-"link": "season.shop/id=4535345432"
+"components": [
+{
+"Part name": "TL072",
+"Placement": "IC2", 
+"Package": "DIP8",
+},
+{
+"Part name": "LTSA-E67RVAWT",
+"Placement": "LED",
+"Package": "SMD",
+}],
+"pageNumber": 1, //Page number from request parameters
+"pageSize": 2 //Only two items will be displaed per page
 }
+
 ```
 
-#### Basic template for a mailing list
+- ` POST api/list/[list id](list%20id) ` add components to track to a list from JSON structure
 
-```html
-<html>
-<body>
-     <h1>👋 Hello {{ .name}}</h1>
-    <p>You have {{ .bonuses}} bonusSeas 🐳</p>
-     <p>Spend them wisely on:
-     <ul>
-     <li>Whale rental 🐋</li>
-     <li>Steamboat tickets 💨</li>
-     <li>Investing in sea 🪣</li> 
-     </ul>
-     </p>
-     <p>More inforamtion in your profile <a href="{{ .link}}"><span>here</span> </a></p>
-</body>
-</html>
-## There are multiple better ways to construct an email HTML template, this is just a simple example
+- ` POST api/list/[list id](list%20id)/bom ` add all the components from BOM file to list with [list id](list%20id)
+
+- ` POST api/list/[list id](list%20id)/batch ` add all the components from JSON array of to list with [list id](list%20id)
+
+- ` PUT api/list/[list id](list%20id) ` stop tracking component from JSON structure
+
+- ` GET api/list/[list id](list%20id)/schema ` get schema for a list with [list id](list%20id)
+
+- ` POST api/list/[list id](list%20id)/schema ` add schema for a list with [list id](list%20id)
+
+## Core concepts
+
+### BOM
+
+BOM (Bill Of Materials) is a file containing information about electronic components used in a project. Currently, the service supports ` csv ` as BOM file format for upload. The column with all electronic components names must be called ` Part name `
+
+### JSON
+
+Components for service to track are described using JSON structure 
+- **Example:**
+```javascript
+
+{
+"Part name": "TL072",
+"Placement": "IC2", 
+"Package": "DIP8",
+}
+
 ```
 
-#### This example user information and email template produce the following email
+Multiple components can be added at once using ` POST api/list/[list id](list%20id)/batch` and JSON array of components
+- **Example:**
+```javascript
 
+[{
+"Part name": "TL072",
+"Placement": "IC2", 
+"Package": "DIP8",
+},
+{
+"Part name": "LTSA-E67RVAWT",
+"Placement": "LED",
+"Package": "SMD",
+}]
 
-> **To:** <em>moya@govorit.net</em>   
-> **From:** _sea@son.shop_
-<html>
-  <body>
-  <h1>👋 Hello Alice</h1>
-  <p>You have 1200 bonusSeas 🐳</p>
-  <p>Spend them wisely on:
-  <ul>
-  <li>Whale rental 🐋</li>
-  <li>Steamboat tickets 💨</li>
-  <li>Investing in sea 🪣</li> 
-  </ul>
-  </p>
-  <p>More inforamtion in your profile <a href="season.shop"><span>here</span> </a></p>
-  </body>
-  </html>
+```
 
+### Authentication
 
+User authentication is implemented using JWT token linked to user E-Mail. Any requests to ` api/list/* ` require valid token in header ` Token `
 
-## Read statistics
+### Schema
 
-Checking if an email has been read is implemented using [RFC3798](https://datatracker.ietf.org/doc/html/rfc3798) header    
-You can also use service handler `GET /api/{email}/read` to deliberately register that user with this `{email}` has read the message  
+Schemas are used to describe information about list of components
+- **Example:**
+```javascript
 
-## Usage with celery
+{
+"id": "zB7h8u12", //ID of a list 
+"region": 1, //prefered region to track components in
+"fieldNames": [ //list of all the items's field names in a list
+"Placement",
+"Part name",
+"Package"
+    ]
+}
 
-Function `postman.mail(id)` takes a mailing list [id](id) as an argument and starts constructing and sending emails based on template provided for mailing list with this ID
+```

@@ -43,7 +43,7 @@ func (s *server) Init() {
 		fault.Recovery(s.logger.Infof),
 	)
 	s.router.Get("/", file.Content("./src/index.html"))
-	s.router.Get("/article/<name>", s.handleArticle)
+	s.router.Get("/article/name=<name>", s.handleArticle)
 	s.router.Get("/src/*", file.Server(file.PathMap{"/src/": "/src/"}))
 
 	http.Handle("/", s.router)

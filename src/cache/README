@@ -1,111 +1,156 @@
-<p>title: postman
-description:
-authors: icy
-categories: OP projects
-created: 2022-12-06
-updated: 2022-12-07
-version: 0.0.18</p>
+<h1>A tool for monitoring and maintaining the relevance of an electronic components list</h1>
 
-<h5>EN | <a href="README_RU.md">RU</a></h5>
-
-<h1>Your friendly neighbour mailing list service</h1>
+<h2>Technical requirements</h2>
 
 <ul>
-<li>Written in pure GO</li>
-<li>Celery client integration</li>
-<li>Email templates with gohtml syntax supported</li>
-<li>Check if email was read</li>
-<li>All around nice guy letting everybody know about latest gossip in town</li>
+<li><p>Create component list to track from existing BOM fail</p></li>
+
+<li><p>JWT token authentication</p></li>
+
+<li><p>Notify a user when availability of a component in a list changes</p></li>
+
+<li><p>Notifications should contain alternatives to unavailable electronic component</p></li>
+
+<li><p>Add and delete individual items from the list of components to track</p></li>
 </ul>
+
+<h2>Example notification</h2>
+
+<p><a href="example.md">example.md</a></p>
+
+<h2>Example service interaction scenario</h2>
+
+<ol>
+<li><p>User gets an API token tied to an E-Mail address for notifications and authentication</p></li>
+
+<li><p>User creates a new list</p></li>
+
+<li><p>User uploads components from BOM file or adds them using JSON</p></li>
+
+<li><p>Service makes requests to EFind API to check individual components availability</p></li>
+
+<li><p>If component from a list is no longer available, user gets E-Mail notification containing possible alternatives to given item</p></li>
+
+<li><p>User can stop or start tracking of individual component in a list</p></li>
+
+<li><p>User can create multiple lists of components to track</p></li>
+</ol>
+
+<h2>User story</h2>
+
+<blockquote>
+<p>As <strong>inventory manager</strong> I can easily track electronic components from pre-existing BOM file and</p>
+
+<p>get notifications when any from it becomes unavailable</p>
+
+<p>As <strong>electronic engineer</strong> I can add needed components for a new project to a tracking list and</p>
+
+<p>review alternatives, if any electronic component isn&rsquo;t available</p>
+</blockquote>
 
 <h2>API methods</h2>
 
-<h4>Create new mailing list</h4>
+<h3>Associate E-Mail with new API token</h3>
 
-<p><code>POST /api/list</code> - response is an ID for new mailing list</p>
+<ul>
+<li><p><code>POST api/login</code> notifications will be sent to E-Mail in request body</p></li>
 
-<h4>Add user to mailing list</h4>
+<li><p><strong>Response</strong>: JWT token for API authentication</p></li>
+</ul>
 
-<p><code>POST /api/list/{id}</code> - where <a href="id">id</a> is ID list&rsquo;s ID gotten from creation
-  Request&rsquo;s body is a JSON struct with field names corresponding to user&rsquo;s information needed for Email template see <a href="#add-user">Add user</a></p>
+<h3>Working with tracking lists</h3>
 
-<h4>Add multiple users</h4>
+<ul>
+<li><p><code>POST api/list</code> create a new list</p></li>
 
-<p><code>POST /api/list/{id}/batch</code> - where <a href="id">id</a> is ID list&rsquo;s ID gotten from creation
-  Request&rsquo;s body is a JSON array with structs where any individual struct is the same as with single user addition</p>
+<li><p><strong>Response:</strong> new <a href="list%20id">list id</a></p></li>
 
-<h4>Get all the users in mailing list with specific ID</h4>
+<li><p><code>GET api/list/[list ID](list%20ID)?pageNum=[page number](page%20number)&amp;pageSize=[page size](page%20size)</code> get components from a list with given <a href="list%20id">list id</a></p></li>
 
-<p><code>GET /api/list/{id}</code> - response is an array of JSON structs of individual user&rsquo;s information in mailing list with specific ID</p>
-
-<h4>Get read statistics from mailing list</h4>
-
-<p><code>GET api/list/{id}/stat</code> - get information about who read email from mailing list
-  Checkout implementation <a href="#read-statistics">Read statistics</a></p>
-
-<h4>Add email template to mailing list</h4>
-
-<p><code>POST /api/list/{id}/template</code> - request&rsquo;s body is a email template in text/html<br />
-  <a href="https://pkg.go.dev/html/template">html/template</a> is used for email template implementation. This means that all syntax features of gohtml format
-  are available, see <a href="#basic-template-for-a-mailing-list">Basic template for a mailing list</a></p>
-
-<h2>Examples</h2>
-
-<h4>Add user</h4>
-
-<blockquote>
-<p><code>POST /api/list/{id}</code></p>
-<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>&#34;email&#34;: &#34;moya@govorit.net&#34;,
-</span></span><span style="display:flex;"><span>&#34;name&#34;: &#34;Alice&#34;
-</span></span><span style="display:flex;"><span>&#34;bonuses&#34;: &#34;1200&#34;,
-</span></span><span style="display:flex;"><span>&#34;link&#34;: &#34;season.shop/id=4535345432&#34;
-</span></span><span style="display:flex;"><span>}
-</span></span></code></pre></blockquote>
-
-<h4>Basic template for a mailing list</h4>
-<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>&lt;<span style="color:#ff79c6">html</span>&gt;
-</span></span><span style="display:flex;"><span>&lt;<span style="color:#ff79c6">body</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">h1</span>&gt;👋 Hello {{ .name}}&lt;/<span style="color:#ff79c6">h1</span>&gt;
-</span></span><span style="display:flex;"><span>    &lt;<span style="color:#ff79c6">p</span>&gt;You have {{ .bonuses}} bonusSeas 🐳&lt;/<span style="color:#ff79c6">p</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">p</span>&gt;Spend them wisely on:
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">ul</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">li</span>&gt;Whale rental 🐋&lt;/<span style="color:#ff79c6">li</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">li</span>&gt;Steamboat tickets 💨&lt;/<span style="color:#ff79c6">li</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">li</span>&gt;Investing in sea 🪣&lt;/<span style="color:#ff79c6">li</span>&gt; 
-</span></span><span style="display:flex;"><span>     &lt;/<span style="color:#ff79c6">ul</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;/<span style="color:#ff79c6">p</span>&gt;
-</span></span><span style="display:flex;"><span>     &lt;<span style="color:#ff79c6">p</span>&gt;More inforamtion in your profile &lt;<span style="color:#ff79c6">a</span> <span style="color:#50fa7b">href</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;{{ .link}}&#34;</span>&gt;&lt;<span style="color:#ff79c6">span</span>&gt;here&lt;/<span style="color:#ff79c6">span</span>&gt; &lt;/<span style="color:#ff79c6">a</span>&gt;&lt;/<span style="color:#ff79c6">p</span>&gt;
-</span></span><span style="display:flex;"><span>&lt;/<span style="color:#ff79c6">body</span>&gt;
-</span></span><span style="display:flex;"><span>&lt;/<span style="color:#ff79c6">html</span>&gt;
-</span></span><span style="display:flex;"><span>## There are multiple better ways to construct an email HTML template, this is just a simple example
+<li><p><strong>Example response:</strong></p></li>
+</ul>
+<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;components&#34;</span><span style="color:#ff79c6">:</span> [
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;TL072&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Placement&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;IC2&#34;</span>, 
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;DIP8&#34;</span>,
+</span></span><span style="display:flex;"><span>},
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;LTSA-E67RVAWT&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Placement&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;LED&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;SMD&#34;</span>,
+</span></span><span style="display:flex;"><span>}],
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;pageNumber&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#bd93f9">1</span>, <span style="color:#6272a4">//Page number from request parameters
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#f1fa8c">&#34;pageSize&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#bd93f9">2</span> <span style="color:#6272a4">//Only two items will be displaed per page
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>}
+</span></span><span style="display:flex;"><span>
 </span></span></code></pre>
-<h4>This example user information and email template produce the following email</h4>
+<ul>
+<li><p><code>POST api/list/[list id](list%20id)</code> add components to track to a list from JSON structure</p></li>
 
-<blockquote>
-<p><strong>To:</strong> <em>moya@govorit.net</em><br />
-<strong>From:</strong> <em>sea@son.shop</em>
-<html>
-  <body>
-  <h1>👋 Hello Alice</h1>
-  <p>You have 1200 bonusSeas 🐳</p>
-  <p>Spend them wisely on:
-  <ul>
-  <li>Whale rental 🐋</li>
-  <li>Steamboat tickets 💨</li>
-  <li>Investing in sea 🪣</li>
-  </ul>
-  </p>
-  <p>More inforamtion in your profile <a href="season.shop"><span>here</span> </a></p>
-  </body>
-  </html></p>
-</blockquote>
+<li><p><code>POST api/list/[list id](list%20id)/bom</code> add all the components from BOM file to list with <a href="list%20id">list id</a></p></li>
 
-<h2>Read statistics</h2>
+<li><p><code>POST api/list/[list id](list%20id)/batch</code> add all the components from JSON array of to list with <a href="list%20id">list id</a></p></li>
 
-<p>Checking if an email has been read is implemented using <a href="https://datatracker.ietf.org/doc/html/rfc3798">RFC3798</a> header<br />
-You can also use service handler <code>GET /api/{email}/read</code> to deliberately register that user with this <code>{email}</code> has read the message</p>
+<li><p><code>PUT api/list/[list id](list%20id)</code> stop tracking component from JSON structure</p></li>
 
-<h2>Usage with celery</h2>
+<li><p><code>GET api/list/[list id](list%20id)/schema</code> get schema for a list with <a href="list%20id">list id</a></p></li>
 
-<p>Function <code>postman.mail(id)</code> takes a mailing list <a href="id">id</a> as an argument and starts constructing and sending emails based on template provided for mailing list with this ID</p>
+<li><p><code>POST api/list/[list id](list%20id)/schema</code> add schema for a list with <a href="list%20id">list id</a></p></li>
+</ul>
+
+<h2>Core concepts</h2>
+
+<h3>BOM</h3>
+
+<p>BOM (Bill Of Materials) is a file containing information about electronic components used in a project. Currently, the service supports <code>csv</code> as BOM file format for upload. The column with all electronic components names must be called <code>Part name</code></p>
+
+<h3>JSON</h3>
+
+<p>Components for service to track are described using JSON structure
+- <strong>Example:</strong></p>
+<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;TL072&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Placement&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;IC2&#34;</span>, 
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;DIP8&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span></code></pre>
+<p>Multiple components can be added at once using <code>POST api/list/[list id](list%20id)/batch</code> and JSON array of components
+- <strong>Example:</strong></p>
+<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;TL072&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Placement&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;IC2&#34;</span>, 
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;DIP8&#34;</span>,
+</span></span><span style="display:flex;"><span>},
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;LTSA-E67RVAWT&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Placement&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;LED&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;SMD&#34;</span>,
+</span></span><span style="display:flex;"><span>}]
+</span></span><span style="display:flex;"><span>
+</span></span></code></pre>
+<h3>Authentication</h3>
+
+<p>User authentication is implemented using JWT token linked to user E-Mail. Any requests to <code>api/list/*</code> require valid token in header <code>Token</code></p>
+
+<h3>Schema</h3>
+
+<p>Schemas are used to describe information about list of components
+- <strong>Example:</strong></p>
+<pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;"><code><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;id&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#34;zB7h8u12&#34;</span>, <span style="color:#6272a4">//ID of a list 
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#f1fa8c">&#34;region&#34;</span><span style="color:#ff79c6">:</span> <span style="color:#bd93f9">1</span>, <span style="color:#6272a4">//prefered region to track components in
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#f1fa8c">&#34;fieldNames&#34;</span><span style="color:#ff79c6">:</span> [ <span style="color:#6272a4">//list of all the items&#39;s field names in a list
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#f1fa8c">&#34;Placement&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Part name&#34;</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;Package&#34;</span>
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span></code></pre>
